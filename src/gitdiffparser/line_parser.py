@@ -2,6 +2,9 @@ import re
 import sys
 
 FILE_DIFF_HEADER = re.compile(r"^diff --git a/(?P<from_file>.*?)\s* b/(?P<to_file>.*?)\s*$")
+SIM_INDEX_HEADER = re.compile(r"^similarity index (?P<sim>\d+%)$")
+RENAME_FROM_HEADER = re.compile(r"^rename from (?P<from_file>.*)$")
+RENAME_TO_HEADER = re.compile(r"^rename to (?P<to_file>.*)$")
 OLD_MODE_HEADER = re.compile(r"^old mode (?P<mode>\d+)$")
 NEW_MODE_HEADER = re.compile(r"^new mode (?P<mode>\d+)$")
 NEW_FILE_MODE_HEADER = re.compile(r"^new file mode (?P<mode>\d+)$")
@@ -38,12 +41,30 @@ def parse_lines(line_iterable):
 
 def parse_line(line, prev_state):
     # "diff --git a/{TO_FILE} b/{TO_FILE}""
-    if prev_state in ("start_of_file", "new_mode_header", "line_diff", "no_newline", "index_diff_header", "binary_diff"):
+    if prev_state in ("start_of_file", "rename_to_header", "new_mode_header", "line_diff", "no_newline", "index_diff_header", "binary_diff"):
         match = FILE_DIFF_HEADER.search(line)
         if match:
             return "file_diff_header", match.groupdict()
         elif prev_state == "start_of_file":
             raise ParseError("Expected file diff header")
+
+    # "similarity index {SIM}"
+    if prev_state == "file_diff_header":
+        match = SIM_INDEX_HEADER.search(line)
+        if match:
+            return "sim_index_header", match.groupdict()
+    
+    # "rename from {FROM_FILE}"
+    if prev_state == "sim_index_header":
+        match = RENAME_FROM_HEADER.search(line)
+        if match:
+            return "rename_from_header", match.groupdict()
+    
+    # "rename to {TO_FILE}"
+    if prev_state == "rename_from_header":
+        match = RENAME_TO_HEADER.search(line)
+        if match:
+            return "rename_to_header", match.groupdict()
 
     # "old mode {MODE}"
     if prev_state == "file_diff_header":
