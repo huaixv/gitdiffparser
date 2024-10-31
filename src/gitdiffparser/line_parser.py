@@ -32,7 +32,7 @@ def parse_lines(line_iterable):
         try:
             state, parsed = parse_line(line, prev_state)
         except ParseError as parse_exc:
-            raise LineParseError("{} ({!r})".format(parse_exc, line), line_index + 1), None, sys.exc_info()[2]
+            raise LineParseError("{} ({!r})".format(parse_exc, line), line_index + 1).with_traceback(sys.exc_info()[2])
         else:
             yield state, parsed, line
 
@@ -137,4 +137,4 @@ def parse_line(line, prev_state):
 
 if __name__ == "__main__":
     for state, parsed, line in parse_lines(sys.stdin):
-        print state, line.rstrip()
+        print(state, line.rstrip())
